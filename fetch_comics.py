@@ -1,10 +1,6 @@
 import os
-import os
-import random
-import urllib
 
 import requests
-
 
 
 def fetch_image_from_url(image_link, image_directory, image_name, params=None):
@@ -42,4 +38,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

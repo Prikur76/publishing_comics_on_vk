@@ -45,7 +45,7 @@ def main():
     comic = get_random_comic_description()
     comic_url, comic_alt, comic_name = comic
 
-    images_path = './files'
+    images_path = 'images'
     os.makedirs(images_path, exist_ok=True)
 
     fetch_image_from_url(image_link=comic_url,

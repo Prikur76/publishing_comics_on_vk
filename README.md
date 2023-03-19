@@ -38,7 +38,9 @@ GROUP_ID со знаком ``минус``.
 Запрос токен для предоставления доступа выглядит следующим образом: 
 https://oauth.vk.com/authorize?client_id=<CLIENT_ID>&display=page&scope=photos,groups,wall,offline&response_type=token&v=<VK_API_VERSION>
 При получении ключа вы увидите страницу со списком разрешений как на скриншоте.
+
 ![image](https://i.paste.pics/MIVPN.png)
+
 После чего получите ссылку, содержащую токен. Токен сохраните в переменную **``VK_ACCESS_TOKEN``**.
 
 ### Примеры

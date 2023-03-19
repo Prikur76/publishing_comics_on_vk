@@ -55,9 +55,7 @@ def get_attachments(method_url, params, group_id, image_path):
 
     attachments = []
     for photo in response.json()['response']:
-        media_id = photo['id']
-        owner_id = photo['owner_id']
-        attachment = f'photo{owner_id}_{media_id}'
+        attachment = f"photo{photo['owner_id']}_{photo['id']}"
         attachments.append(attachment)
 
     return attachments

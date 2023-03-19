@@ -1,157 +1,85 @@
-import os
 from urllib.parse import urljoin
-
-from dotenv import load_dotenv
 
 import requests
 
 
-
-def get_groups_info(base_url, vk_token, vk_api_version):
-    """ """
+def get_user_groups(method_url, params, user_id, extended=1, filter=None):
+    """Возвращает список групп пользователя"""
     method = 'groups.get'
-    params = {
-        'extended': 1,
-        'access_token': vk_token,
-        'v': vk_api_version,
+    group_url = urljoin(method_url, method)
+    adding_params = {
+        'user_id': user_id,
+        'extended': extended,
     }
-    group_url = urljoin(base_url, method)
-
+    params.update(adding_params)
+    if filter:
+        params['filter'] = filter
     response = requests.get(url=group_url, params=params)
     response.raise_for_status()
-
-    full_info = response.json()['response']
-    groups_count, groups_descriptions = full_info['count'], full_info['items']
-
-    return groups_count, groups_descriptions
+    user_groups = response.json()['response']
+    return user_groups
 
 
-def get_wall_upload_server(base_url, vk_token, vk_api_version):
-    """ """
+def get_upload_url(method_url, params, group_id):
+    """Возвращает ссылку для загрузки файла"""
     wall_upload_method = 'photos.getWallUploadServer'
-    payload = {
-        'access_token': vk_token,
-        'v': vk_api_version,
-    }
-    wall_upload_url = urljoin(base_url, wall_upload_method)
-    response = requests.get(url=wall_upload_url, params=payload)
-    upload_server_info = response.json()['response']
-    album_id, upload_url, user_id = upload_server_info.values()
-    return abs(album_id), upload_url, user_id
+    wall_upload_url = urljoin(method_url, wall_upload_method)
+    params['group_id'] = abs(int(group_id))
+    response = requests.get(url=wall_upload_url, params=params)
+    response.raise_for_status()
+    upload_server = response.json()['response']
+    upload_url = upload_server['upload_url']
+    return upload_url
 
 
-def upload_photo(upload_url, photo_path):
-    """ """
-    with open(photo_path, 'rb') as file:
+def upload_photo(method_url, params, group_id, image_path):
+    """Загружает файл на сервер vk"""
+    upload_url = get_upload_url(method_url, params, group_id)
+    with open(image_path, 'rb') as image_file:
         files = {
-            'photo': file,
+            'photo': image_file,
         }
-    response = requests.post(url=upload_url, files=files)
-    response.raise_for_status()
-    upload_response = response.json()
-    return upload_response
+        response = requests.post(url=upload_url, files=files)
+        response.raise_for_status()
+    return response.json()
 
 
-def save_wall_photo(base_url, vk_token, vk_api_version, upload_response):
-    """ """
+def get_attachments(method_url, params, group_id, image_path):
+    """Сохраняет файл на стене сообщества"""
+    upload_response = upload_photo(method_url, params, group_id, image_path)
+    params.update(upload_response)
     save_wall_method = 'photos.saveWallPhoto'
-    save_wall_url = urljoin(base_url, save_wall_method)
-    server, photo, hash = upload_response.values()
-    payload = {
-        'access_token': vk_token,
-        'v': vk_api_version,
-        'server': server,
-        'photo': photo,
-        'hash': hash,
-    }
-    response = requests.post(url=save_wall_url, data=payload)
+    save_wall_url = urljoin(method_url, save_wall_method)
+    response = requests.post(url=save_wall_url, data=params)
     response.raise_for_status()
-    photos_descriptions_for_publishing = response.json()['response']
+
     attachments = []
-    for photo in photos_descriptions_for_publishing:
-        album_id = photo['album_id']
+    for photo in response.json()['response']:
         media_id = photo['id']
         owner_id = photo['owner_id']
         attachment = f'photo{owner_id}_{media_id}'
         attachments.append(attachment)
+
     return attachments
 
 
-def publish_photo_on_wall(vk_token, vk_api_version, group_id,
-                          attachments, message='', friends_only=0,
-                          from_group=1):
+def publish_photo_on_wall(method_url, params, group_id, attachments,
+                          friends_only=0, from_group=1, message=None):
     """
     Публикует изображение на странице сообщества и
-    возвращает ID поста
+    возвращает ответ
     """
-
     wall_post_method = 'wall.post'
-    wall_post_url = urljoin(base_url, wall_post_method)
-    payload = {
-        'access_token': vk_token,
-        'v': vk_api_version,
+    wall_post_url = urljoin(method_url, wall_post_method)
+    adding_params = {
         'owner_id': group_id,
-        'friends_only': 0,
-        'from_group': 1,
-        'message': comic_alt,
+        'friends_only': friends_only,
+        'from_group': from_group,
         'attachments': attachments,
+        'message': message,
     }
-    response = requests.post(url=wall_post_url, data=payload)
+    params.update(adding_params)
+    response = requests.post(url=wall_post_url, data=params)
     response.raise_for_status()
     post_id = response.json()['response']
-    return post_id.values()
-
-
-
-load_dotenv()
-
-vk_token = os.getenv('VK_ACCESS_TOKEN')
-vk_api_version = os.getenv('VK_API_VERSION')
-vk_user_id = os.getenv('VK_USER_ID')
-base_url = 'https://api.vk.com/method/'
-group_id = os.getenv('GROUP_ID')
-
-photo_name = 'lymphocytes.png'
-
-# groups = get_groups_info(base_url)[1]
-# print(*groups)
-
-wall_upload_info = get_wall_upload_server(base_url, vk_token, vk_api_version)
-upload_url = wall_upload_info[1]
-# print(album_id, upload_url, user_id)
-with open('images/' + photo_name, 'rb') as file:
-    files = {
-        'photo': file,
-    }
-    response = requests.post(url=upload_url, files=files)
-    response.raise_for_status()
-upload_response = response.json()
-
-method = 'photos.saveWallPhoto'
-save_wall_url = urljoin(base_url, method)
-server, photo_description, hash = upload_response.values()
-payload = {
-    'access_token': vk_token,
-    'v': vk_api_version,
-    'server': server,
-    'photo': photo_description,
-    'hash': hash,
-}
-response = requests.post(url=save_wall_url, data=payload)
-response.raise_for_status()
-photos_descriptions_for_publishing = response.json()['response']
-
-attachments = []
-for photo in photos_descriptions_for_publishing:
-    album_id = photo['album_id']
-    media_id = photo['id']
-    owner_id = photo['owner_id']
-    attachment =  f'photo{owner_id}_{media_id}'
-    attachments.append(attachment)
-# print(attachments)
-
-comic_alt = "We'll turn the asteroid belt into ball bearings " \
-            "to go between different rings orbiting at different speeds."
-
-print(response.json())
-
+    return post_id

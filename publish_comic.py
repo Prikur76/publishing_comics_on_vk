@@ -57,7 +57,6 @@ def main():
     images_path = args.folder
     os.makedirs(images_path, exist_ok=True)
 
-    method_url = 'https://api.vk.com/method/'
     params = {
         'access_token': os.getenv('VK_ACCESS_TOKEN'),
         'v': os.getenv('VK_API_VERSION'),
@@ -70,10 +69,9 @@ def main():
                          image_name=comic_name)
 
     comic_path = os.path.join(images_path, comic_name)
-    attachments = vk.get_attachments(method_url, params,
-                                     group_id, comic_path)
-    vk.publish_photo_on_wall(method_url, params, group_id,
-                             attachments, message=comic_alt)
+    attachments = vk.get_attachments(params, group_id, comic_path)
+    vk.publish_photo_on_wall(params, group_id, attachments,
+                             message=comic_alt)
     try:
         os.remove(comic_path)
     except OSError as err:

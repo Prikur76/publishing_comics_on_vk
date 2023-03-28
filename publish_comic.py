@@ -11,13 +11,16 @@ import vk_upload_photo as vk
 
 logger = logging.getLogger(__name__)
 
+
 def get_comics_count():
     """Возвращает количество комиксов"""
     xkcd_url = urljoin('https://xkcd.com/', '/info.0.json')
     response = requests.get(url=xkcd_url)
     response.raise_for_status()
-    comic = response.json()
-    return comic['num']
+    if response:
+        comic = response.json()
+        return comic['num']
+    raise requests.exceptions.HTTPError('Request failed')
 
 
 def get_random_comic_description():
@@ -27,13 +30,15 @@ def get_random_comic_description():
     xkcd_random_url = f'https://xkcd.com/{comic_number}/info.0.json'
     response = requests.get(url=xkcd_random_url)
     response.raise_for_status()
-    comic = response.json()
-    image = urlsplit(comic['img'])
-    image_name = os.path.split(
-        unquote(image.path, encoding='utf-8', errors='replace')
-    )
-    comic_description = [comic['img'], comic['alt'], image_name[1]]
-    return comic_description
+    if response:
+        comic = response.json()
+        image = urlsplit(comic['img'])
+        image_name = os.path.split(
+            unquote(image.path, encoding='utf-8', errors='replace')
+        )
+        comic_description = [comic['img'], comic['alt'], image_name[1]]
+        return comic_description
+    raise requests.exceptions.HTTPError('Request failed')
 
 
 def fetch_image_from_url(image_link, image_directory, image_name):
@@ -54,7 +59,6 @@ def main():
     )
 
     load_dotenv()
-
     vk_token = os.environ['VK_ACCESS_TOKEN']
     vk_api_version = os.environ['VK_API_VERSION']
     group_id = os.environ['GROUP_ID']
@@ -74,26 +78,25 @@ def main():
         comic = get_random_comic_description()
         comic_url, comic_alt, comic_name = comic
         comic_path = os.path.join(images_path, comic_name)
-
         fetch_image_from_url(
             comic_url, images_path, comic_name
         )
-
         attachments = vk.get_attachments_for_publish(
             vk_token, vk_api_version, group_id, comic_path
         )
-
         vk.publish_photo_on_wall(
             vk_token, vk_api_version, group_id,
             attachments, message=comic_alt
         )
-        os.remove(comic_path)
 
     except requests.exceptions.HTTPError as http_err:
         logger.error(f'Request failed with HTTPError: {http_err}')
 
     except OSError as os_err:
         logger.error(f'Failed with OSError: {os_err.comic_path}')
+
+    finally:
+        os.remove(comic_path)
 
 
 if __name__ == '__main__':

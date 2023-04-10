@@ -32,15 +32,16 @@ def get_photo_upload_params(upload_url, image_path):
     if 'error' in response.json():
         error_msg = response.json()['error']['error_msg']
         raise requests.exceptions.HTTPError(error_msg)
-    return response.json().values()
+    server, photo, hash_value = response.json().values()
+    return server, photo, hash_value
 
 
-def save_photo_on_server(vk_token, vk_api_version, group_id, upload_params):
+def save_photo_on_server(vk_token, vk_api_version, group_id,
+                         server, photo, hash_value):
     """
     Сохраняет файл на сервере VK и возвращает ответ,
     содержащий объект фото
     """
-    server, photo, hash_value = upload_params
     params = {
         'access_token': vk_token,
         'group_id': group_id,

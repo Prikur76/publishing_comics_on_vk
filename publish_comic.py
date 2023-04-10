@@ -80,11 +80,12 @@ def main():
         upload_url = vk.get_upload_url(
             vk_token, vk_api_version, group_id
         )
-        upload_params = vk.get_photo_upload_params(
+        server, photo, hash_value = vk.get_photo_upload_params(
             upload_url, comic_path
         )
         attachments = vk.save_photo_on_server(
-            vk_token, vk_api_version, group_id, upload_params
+            vk_token, vk_api_version, group_id,
+            server, photo, hash_value
         )
 
         vk.publish_photo_on_wall(
